@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import styles from './styles';
 import MessageList from './components/MessageList';
@@ -15,17 +15,24 @@ const App = () => {
   const [selectedTipo, setSelectedTipo] = useState('todos');
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
+
   const mqttClient = useRef(null);
   const notificationListener = useRef();
   const responseListener = useRef();
 
-
-  //solicita permisos para notificaciones
+  
   useEffect(() => {
     registerForPushNotificationsAsync();
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {}); 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {}); //escucha la respuesta de la notificación
+    
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log("📲 Notificación recibida:", notification);
+    });
+
+    
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log("📲 Interacción con notificación:", response);
+    });
 
     return () => {
       Notifications.removeNotificationSubscription(notificationListener.current);
@@ -33,8 +40,7 @@ const App = () => {
     };
   }, []);
 
-
-
+  
   useEffect(() => {
     const cargarAlertas = async () => {
       const almacenadas = await loadAlerts();
@@ -43,13 +49,13 @@ const App = () => {
     cargarAlertas();
   }, []);
 
-
   
   useEffect(() => {
     mqttClient.current = initMQTT(
       async (message) => {
         try {
           const parsed = JSON.parse(message.toString());
+
           const newMessage = {
             zona: parsed.zona || 'Desconocida',
             tipo: parsed.tipo || 'general',
@@ -57,18 +63,22 @@ const App = () => {
             timestamp: new Date().toISOString(),
           };
 
-          setMessages((prev) => {
+          setMessages(prev => {
             const updated = [newMessage, ...prev].slice(0, 50);
             saveAlerts(updated);
             return updated;
           });
 
-          if (newMessage.tipo === 'alerta' || newMessage.tipo === 'movimiento') {
-            await sendAlertNotification(newMessage.zona, newMessage.tipo, newMessage.valor);
-          }
+          // Mostrar notificación para cualquier tipo
+          await sendAlertNotification(newMessage.zona, newMessage.tipo, newMessage.valor);
+
         } catch (e) {
-          const rawMessage = { raw: message.toString(), timestamp: new Date().toISOString() };
-          setMessages((prev) => {
+          const rawMessage = {
+            raw: message.toString(),
+            timestamp: new Date().toISOString(),
+          };
+
+          setMessages(prev => {
             const updated = [rawMessage, ...prev].slice(0, 50);
             saveAlerts(updated);
             return updated;
@@ -92,7 +102,7 @@ const App = () => {
     };
   }, []);
 
-  // Aplicar filtros a los mensajes
+  
   useEffect(() => {
     const filtrados = messages.filter((msg) => {
       const zonaMatch = selectedZona === 'todas' || msg.zona === selectedZona;
@@ -113,7 +123,6 @@ const App = () => {
         <ActivityIndicator size="large" color="#0000ff" style={{ marginBottom: 10 }} />
       )}
 
-      {/* Filtros */}
       <FilterBar
         zonas={zonas}
         tipos={tipos}
@@ -123,7 +132,6 @@ const App = () => {
         setSelectedTipo={setSelectedTipo}
       />
 
-      {/* Lista de mensajes */}
       <ScrollView style={styles.messagesContainer}>
         <MessageList messages={filteredMessages} />
       </ScrollView>

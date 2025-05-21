@@ -5,7 +5,7 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true, //muestra la alerta
     shouldPlaySound: true, //reproduce el sonido
-    shouldSetBadge: false, //no actualiza icono de la app
+    shouldSetBadge: false, 
   }),
 });
 
