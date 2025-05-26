@@ -20,16 +20,16 @@ const App = () => {
   const notificationListener = useRef();
   const responseListener = useRef();
 
-  
+
   useEffect(() => {
     registerForPushNotificationsAsync();
 
-    
+
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log("📲 Notificación recibida:", notification);
     });
 
-    
+
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       console.log("📲 Interacción con notificación:", response);
     });
@@ -40,7 +40,7 @@ const App = () => {
     };
   }, []);
 
-  
+
   useEffect(() => {
     const cargarAlertas = async () => {
       const almacenadas = await loadAlerts();
@@ -49,19 +49,26 @@ const App = () => {
     cargarAlertas();
   }, []);
 
-  
+
   useEffect(() => {
     mqttClient.current = initMQTT(
       async (message) => {
         try {
           const parsed = JSON.parse(message.toString());
 
+          const capitalize = (text) =>
+            text
+              ?.toString()
+              .toLowerCase()
+              .replace(/\b\w/g, (char) => char.toUpperCase());
+
           const newMessage = {
-            zona: parsed.zona || 'Desconocida',
-            tipo: parsed.tipo || 'general',
+            zona: capitalize(parsed.zona || 'Desconocida'),
+            tipo: capitalize(parsed.tipo || 'General'),
             valor: parsed.valor || '',
             timestamp: new Date().toISOString(),
           };
+
 
           setMessages(prev => {
             const updated = [newMessage, ...prev].slice(0, 50);
@@ -102,7 +109,7 @@ const App = () => {
     };
   }, []);
 
-  
+
   useEffect(() => {
     const filtrados = messages.filter((msg) => {
       const zonaMatch = selectedZona === 'todas' || msg.zona === selectedZona;
